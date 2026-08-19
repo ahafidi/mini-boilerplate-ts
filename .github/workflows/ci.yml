@@ -17,7 +17,7 @@ jobs:
   commitlint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           # actions/checkout defaults to a shallow clone; commitlint needs every
           # commit in the range below to be present locally.
@@ -58,7 +58,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       # Same as above: the version has to be stated explicitly.
       - uses: pnpm/action-setup@v4
         with:
