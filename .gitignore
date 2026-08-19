@@ -1,0 +1,14 @@
+# Dependencies. The pnpm store lives inside the project: the project is mounted
+# over virtiofs from the host, and pnpm requires the store and node_modules to
+# sit on the same filesystem to create hard links.
+node_modules/
+.pnpm-store/
+
+# Build
+dist/
+
+# Misc
+*.log
+.env
+.env.*
+!.env.example

@@ -1,0 +1,74 @@
+# To get started with Dependabot version updates, you'll need to specify which
+# package ecosystems to update and where the package manifests are located.
+# Please see the documentation for more information:
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+# https://containers.dev/guide/dependabot
+
+# Every `commit-message.prefix` below exists so Dependabot's own commits satisfy
+# commitlint (see commitlint.config.js). Without a prefix it writes
+# "Bump X from A to B", which fails on both `type-empty` and `subject-case`.
+# With one it writes "chore(deps): bump X from A to B" — the lowercase "bump" is
+# what we need. Dependabot has been known to capitalize it in some cases
+# (dependabot-core#11705); if a PR ever fails CI on `subject-case`, that is why.
+version: 2
+updates:
+  - package-ecosystem: "devcontainers"
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(devcontainer)"
+
+  # The `devcontainers` ecosystem above only reads devcontainer.json. Our base
+  # image is declared in the Dockerfile's `FROM` (devcontainer.json uses
+  # `build.dockerfile`, not `image`), so `docker` is what actually watches the
+  # Node major.
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(docker)"
+
+  # "npm" names the JavaScript ecosystem here, not the package manager:
+  # Dependabot calls it `npm_and_yarn` internally and reads `pnpm-lock.yaml`
+  # just as well. There is no "pnpm" value — writing it would break the config.
+  #
+  # Known caveat: pnpm 11 can emit a lockfile as two YAML documents, which
+  # Dependabot fails to parse (dependabot-core#14919). Ours is a single document
+  # (`lockfileVersion: '9.0'`); if a PR ever fails with
+  # `dependency_file_not_parseable`, start there.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(deps)"
+      # Everything here except `effect` is a devDependency, so this is the
+      # prefix you will actually see most of the time.
+      prefix-development: "chore(dev-deps)"
+    groups:
+      # These packages share the Go engine and are versioned together
+      # (7.0.2 <-> 7.0.2001): in two separate PRs they would stay out of sync
+      # until the second one lands.
+      typescript:
+        patterns:
+          - "typescript"
+          - "oxlint-tsgolint"
+      # Same reasoning for the oxc chain, whose two tools share one VS Code
+      # extension.
+      oxc:
+        patterns:
+          - "oxlint"
+          - "oxfmt"
+
+  # Watches the `uses:` pins in .github/workflows. Without this entry the
+  # actions are the one thing in the repo nothing keeps up to date — and
+  # `pnpm/action-setup` in particular changed its version-resolution behaviour
+  # between v3 and v4, the kind of break you want a PR for rather than a red CI.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(ci)"
