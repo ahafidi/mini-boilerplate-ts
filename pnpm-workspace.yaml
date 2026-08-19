@@ -1,0 +1,11 @@
+# pnpm 11 settings file. Not a workspace declaration — there is no `packages:`
+# key here, this repo is a single package. Since pnpm 11 the `pnpm` field in
+# package.json is no longer read, and settings like the one below live here.
+
+# pnpm blocks dependency install scripts by default and asks for an explicit
+# decision. lefthook's postinstall only runs `lefthook install`, which the
+# `prepare` script in package.json already does — and the Go binary itself comes
+# from optionalDependencies, not from that script. So we deliberately turn it
+# down: one single, visible mechanism for installing the hooks.
+allowBuilds:
+  lefthook: false

@@ -1,0 +1,36 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+
+  "options": {
+    // Enables the rules that need the type checker. oxlint then delegates to
+    // `oxlint-tsgolint`, built on the same Go engine as `tsc` — hence the joint
+    // versioning of the two packages (7.0.2 / 7.0.2001): bumping them
+    // separately puts them out of sync.
+    //
+    // What it catches and what it does not: forgotten Promises yes
+    // (`no-floating-promises`), forgotten Effects NO. An `Effect.log(...)` left
+    // bare, with no `yield*` or `runPromise`, does nothing at runtime and no
+    // rule here flags it — an Effect is not a thenable. That class of bug stays
+    // on the reviewer.
+    "typeAware": true
+  },
+
+  "plugins": ["typescript", "unicorn", "oxc", "promise", "node", "vitest"],
+
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+
+  "rules": {
+    // The Promise counterpart of the omission described above.
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    // Effect leans on very precise types; an `any` dissolves them.
+    "typescript/no-explicit-any": "error",
+    "typescript/consistent-type-imports": "error"
+  },
+
+  "ignorePatterns": ["dist", "node_modules"]
+}

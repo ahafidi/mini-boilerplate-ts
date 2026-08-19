@@ -1,0 +1,93 @@
+# Runs the same checks as the local hooks. They are not redundant: the hooks are
+# skippable with `git commit --no-verify`, and Dependabot's commits never go
+# through them at all.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  # `edited` matters: a title fix does not produce a new commit, so without it
+  # the title check below would stay red forever on a PR whose title was
+  # corrected. It also fires on body edits, which the concurrency group absorbs.
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+# A new push to a PR cancels the run still in flight for it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  commitlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # actions/checkout defaults to a shallow clone; commitlint needs every
+          # commit in the range below to be present locally.
+          fetch-depth: 0
+
+      # `version` has no default in v4: without it, the action looks for a
+      # `packageManager` field in package.json and aborts when there is none.
+      # We deliberately keep pnpm unpinned everywhere else (see the Dockerfile),
+      # so the major goes here rather than in package.json.
+      # `cache: pnpm` below needs pnpm already on PATH — hence this step first.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      # --ignore-scripts skips the `prepare` script: installing git hooks on a
+      # CI runner is pointless.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # On a pull request, check every commit in the branch. The two SHAs come
+      # from the event payload, so this works on forks too.
+      - name: Lint pull request commits
+        if: github.event_name == 'pull_request'
+        run: >
+          pnpm exec commitlint
+          --from ${{ github.event.pull_request.base.sha }}
+          --to ${{ github.event.pull_request.head.sha }}
+          --verbose
+
+      # With squash merging, the commit that lands on main is the PR *title*,
+      # which nothing else checks: the step above reads the branch's commits,
+      # not the title. Rebase merging keeps those commits instead, so both
+      # checks are needed as long as both merge buttons are enabled.
+      #
+      # The title travels through `env:` rather than into `run:` directly.
+      # Inlining `${{ ... }}` in a shell line lets a title containing `$(...)`
+      # or backticks execute on the runner, and titles come from anyone who can
+      # open a pull request.
+      - name: Lint pull request title
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: echo "$PR_TITLE" | pnpm exec commitlint --verbose
+
+      # On a push to main, only the pushed commit needs checking.
+      - name: Lint pushed commit
+        if: github.event_name == 'push'
+        run: pnpm exec commitlint --last --verbose
+
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      # Same as above: the version has to be stated explicitly.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # typecheck + lint + format + tests, the same script you run locally.
+      - run: pnpm check

@@ -1,0 +1,51 @@
+{
+  "compilerOptions": {
+    // --- Target ---------------------------------------------------------------
+    // Node 24: all of ES2024 is available natively, nothing to transpile.
+    "target": "es2024",
+    "lib": ["es2024"],
+    "types": ["node"],
+
+    // --- Modules -------------------------------------------------------------
+    // `nodenext` makes tsc resolve exactly like Node does, including effect's
+    // `exports` map in its package.json.
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    // Treat every file as a module even without an import/export: keeps stray
+    // variables from leaking into global scope.
+    "moduleDetection": "force",
+
+    // --- Running straight from Node -------------------------------------------
+    // Node 24 strips types on the fly, so `node src/main.ts` works with no build
+    // step. The three options below keep that setup coherent.
+    //
+    // Node does not rewrite import paths, it opens the file exactly as written:
+    // relative imports therefore carry the real extension, `./Greeter.ts`.
+    "allowImportingTsExtensions": true,
+    // The corollary TypeScript enforces: allowing those imports forbids
+    // emitting. Fine here, `tsc` only ever type-checks.
+    "noEmit": true,
+    // Forbids enum, namespace and constructor parameter properties — the only
+    // syntax Node's type stripping cannot handle, because they generate code
+    // instead of disappearing. Without this option the typecheck would pass and
+    // execution would fail.
+    "erasableSyntaxOnly": true,
+    // Type-only imports must be written `import type`: what gets erased at
+    // compile time becomes explicit in the source.
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+
+    // --- Strictness -----------------------------------------------------------
+    "strict": true,
+    // The next two are NOT part of `strict`, and are expensive to turn on once
+    // code exists: better to start with them.
+    // `tab[0]` is typed `T | undefined` rather than `T`.
+    "noUncheckedIndexedAccess": true,
+    // Distinguishes "property absent" from "property present and undefined".
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts"]
+}

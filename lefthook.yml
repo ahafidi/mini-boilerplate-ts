@@ -1,0 +1,33 @@
+# Git hooks. Installed by the `prepare` script in package.json, which pnpm runs
+# after every `pnpm install` — see the note in pnpm-workspace.yaml about why
+# lefthook's own postinstall is turned down.
+#
+# Editing this file is not enough on its own: run `pnpm exec lefthook install`
+# to re-sync .git/hooks (or just `pnpm install`).
+#
+# Escape hatch: `git commit --no-verify` skips everything below. That is exactly
+# why the same checks run again in CI (.github/workflows/ci.yml) — Dependabot's
+# commits never go through these local hooks either.
+
+commit-msg:
+  jobs:
+    # {1} is the hook's first argument: the path to the file holding the message
+    # being written. commitlint reads it via --edit.
+    - name: commitlint
+      run: pnpm exec commitlint --edit {1}
+
+pre-commit:
+  parallel: true
+  jobs:
+    # Formats the staged files and re-stages what it changed, so the commit
+    # carries the formatted version rather than failing on it.
+    - name: oxfmt
+      glob: "*.{ts,js,json,jsonc,md,yml,yaml}"
+      run: pnpm exec oxfmt {staged_files}
+      stage_fixed: true
+
+    # Type-aware linting needs the type checker, so it reads the whole project
+    # regardless — but it only reports on the staged files.
+    - name: oxlint
+      glob: "*.ts"
+      run: pnpm exec oxlint {staged_files}

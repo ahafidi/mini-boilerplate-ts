@@ -1,0 +1,80 @@
+// Format: https://aka.ms/devcontainer.json — options: https://containers.dev
+{
+  "name": "mini-boilerplate-ts",
+
+  // Paths are relative to THIS file. The context steps up one level so the
+  // build can see the repo root, while the Dockerfile stays stored there.
+  "build": {
+    "context": "..",
+    "dockerfile": "../Dockerfile"
+  },
+
+  // Claude Code is now installed by the native installer in the Dockerfile.
+  // Only gh still comes from a Feature.
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  // `--dangerously-skip-permissions` is refused when Claude Code runs as root.
+  "containerUser": "node",
+  "remoteUser": "node",
+
+  // Named volumes: credentials survive rebuilds.
+  // The names are deliberately global (no ${devcontainerId}) so the session is
+  // shared across all your repos. Suffix them with -${devcontainerId} if you
+  // want strict per-project isolation instead.
+  //
+  // No volume for the pnpm store: the project is mounted over virtiofs from the
+  // host, whereas a Docker volume is ext4. pnpm requires the store and
+  // `node_modules` to share a filesystem to create hard links — so it ignored
+  // the volume and fell back to `<project>/.pnpm-store`.
+  "mounts": [
+    "source=devbox-claude,target=/home/node/.claude,type=volume",
+    "source=devbox-gh,target=/home/node/.config/gh,type=volume"
+  ],
+
+  "containerEnv": {
+    // Claude Code writes its OAuth into ~/.claude.json, which sits OUTSIDE of
+    // ~/.claude. Without this variable, mounting the volume is not enough to
+    // stay signed in.
+    "CLAUDE_CONFIG_DIR": "/home/node/.claude",
+    "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0"
+  },
+
+  // VS Code probes the environment through a login shell at startup, and
+  // /etc/profile rewrites PATH — wiping the ~/.local/bin the image had set up.
+  // `remoteEnv` applies AFTER that probe, so it gets the last word. Still
+  // required since the move to zsh: /etc/zsh/zprofile goes through the same
+  // initialization chain.
+  "remoteEnv": {
+    "PATH": "${containerEnv:PATH}:/home/node/.local/bin"
+  },
+
+  "customizations": {
+    "vscode": {
+      // `oxc.oxc-vscode` drives both oxlint and oxfmt: it replaces the
+      // ESLint + Prettier pair. It bundles no binaries and uses the project's
+      // own — hence `oxlint` and `oxfmt` in devDependencies.
+      "extensions": ["anthropic.claude-code", "oxc.oxc-vscode"],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "oxc.oxc-vscode",
+        // `chsh` in the Dockerfile is not enough: VS Code opens its terminals
+        // through its own profile, independent of the login shell.
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        // agnoster draws its segment separators with Powerline glyphs. The font
+        // is resolved by VS Code on the HOST, not inside the container: install
+        // a Nerd Font there (MesloLGS NF, Hack Nerd Font…) or the prompt shows
+        // boxes. The `monospace` fallback keeps this harmless if you have not.
+        "terminal.integrated.fontFamily": "'MesloLGS NF', 'Hack Nerd Font', monospace"
+      }
+    }
+  },
+
+  // Checks that the whole chain is present. `claude --version` confirms the
+  // native launcher is on PATH (see remoteEnv above) without probing
+  // authentication: on the first build the volume is empty, and `claude doctor`
+  // would warn about a missing session and advise restoring an empty backup.
+  // For a real health check: `/doctor` inside a session.
+  "postCreateCommand": "node --version && pnpm --version && git --version && gh --version && claude --version"
+}
