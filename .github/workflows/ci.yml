@@ -32,7 +32,7 @@ jobs:
       # We deliberately keep pnpm unpinned everywhere else (see the Dockerfile),
       # so the major goes here rather than in package.json.
       # `cache: pnpm` below needs pnpm already on PATH — hence this step first.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
           version: 11
       - uses: actions/setup-node@v6
@@ -79,7 +79,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       # Same as above: the version has to be stated explicitly.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
           version: 11
       - uses: actions/setup-node@v6
